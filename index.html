@@ -101,6 +101,8 @@
       color: var(--print);
       /* faint "screen print" softness on the ink */
       text-shadow: 0 1px 0 rgba(0,0,0,0.35);
+      /* worn edges — displacement scale driven by JS across the year (0 at anchor) */
+      filter: url(#flake);
       /* slight fade — ink reads aged rather than bright white */
       opacity: 0.94;
       /* worn screen-print: sparse fine pinholes eaten out of the ink so the
@@ -137,6 +139,15 @@
   </style>
 </head>
 <body>
+  <!-- Edge-flake filter. feDisplacementMap scale is set by JS across the year
+       (0 at anchor = clean edges). scale="0" is the no-JS fallback. -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+    <filter id="flake" x="-20%" y="-20%" width="140%" height="140%" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.22" numOctaves="2" seed="4" result="n"/>
+      <feDisplacementMap id="flakeDisp" in="SourceGraphic" in2="n" scale="0" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+  </defs></svg>
+
   <div class="texture" aria-hidden="true"></div>
 
   <main>
@@ -209,6 +220,7 @@
       var drop = lerp(1.0, 0.0, w).toFixed(3);
       var size = Math.round(lerp(200, 230, w));
       var opacity = lerp(0.94, 0.90, w).toFixed(3);
+      var flake = lerp(0, 3, w).toFixed(2);   // edge displacement: 0 at anchor -> 3 at peak
 
       var el = document.querySelector(".wordmark");
       if (el) {
@@ -219,9 +231,13 @@
         el.style.maskSize = size + "px " + size + "px";
         el.style.opacity = opacity;
       }
+      var disp = document.getElementById("flakeDisp");
+      if (disp) disp.setAttribute("scale", flake);
+
       if (q.has("worn") || q.has("date")) {
         console.log("[cbs] worn w=" + w.toFixed(3) +
-          " · freq " + freq + " · drop " + drop + " · size " + size + " · opacity " + opacity);
+          " · freq " + freq + " · drop " + drop + " · size " + size +
+          " · opacity " + opacity + " · flake " + flake);
       }
     })();
   </script>
