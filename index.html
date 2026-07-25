@@ -133,6 +133,28 @@
       vertical-align: -1px;
     }
 
+    /* the lone "r" in shirt occasionally glitches out (fired on an interval by JS) */
+    .glitch { display: inline-block; }
+    .glitch.is-glitching { animation: glitch-r 0.3s steps(1, end) both; }
+    @keyframes glitch-r {
+      0%   { opacity: 1;    transform: none;                        clip-path: none; text-shadow: none; }
+      8%   { opacity: .12;  transform: translate(-2px, 1px) skewX(9deg);  clip-path: inset(0 0 55% 0);
+             text-shadow: 2px 0 rgba(255,40,90,.75), -2px 0 rgba(0,220,255,.7); }
+      16%  { opacity: 1;    transform: translate(3px, -1px);        clip-path: inset(45% 0 0 0);
+             text-shadow: -2px 0 rgba(255,40,90,.7), 2px 0 rgba(0,220,255,.65); }
+      24%  { opacity: 0;    transform: translate(-3px, 0);          clip-path: none; text-shadow: none; }
+      40%  { opacity: 0;    transform: none; }
+      48%  { opacity: 1;    transform: translate(-2px, -1px);       clip-path: inset(60% 0 0 0);
+             text-shadow: 2px 0 rgba(255,40,90,.7), -2px 0 rgba(0,220,255,.6); }
+      56%  { opacity: .1;   transform: translate(2px, 1px) skewX(-7deg); clip-path: none; }
+      64%  { opacity: 1;    transform: translate(1px, 0);           clip-path: inset(0 0 35% 0); text-shadow: none; }
+      76%  { opacity: .35;  transform: translate(-1px, 0); }
+      100% { opacity: 1;    transform: none;                        clip-path: none; text-shadow: none; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .glitch.is-glitching { animation: none; }
+    }
+
     @media (prefers-reduced-motion: no-preference) {
       .wordmark { transition: none; }
     }
@@ -154,7 +176,7 @@
     <h1 class="wordmark">
       <span class="line">cool</span>
       <span class="line">band</span>
-      <span class="line">shirt</span>
+      <span class="line">shi<span class="glitch" id="glitch-r">r</span>t</span>
     </h1>
   </main>
 
@@ -233,6 +255,19 @@
       }
       var disp = document.getElementById("flakeDisp");
       if (disp) disp.setAttribute("scale", flake);
+
+      /* Glitch the lone "r" every GLITCH_EVERY seconds. ?glitch=N overrides the
+         interval (e.g. ?glitch=10 for testing). Skipped under reduced-motion. */
+      var GLITCH_EVERY = 52; // seconds
+      var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      var rEl = document.getElementById("glitch-r");
+      if (rEl && !reduce) {
+        var gp = parseFloat(q.get("glitch"));
+        var everyMs = ((q.has("glitch") && isFinite(gp) && gp > 0) ? gp : GLITCH_EVERY) * 1000;
+        rEl.addEventListener("animationend", function () { rEl.classList.remove("is-glitching"); });
+        setInterval(function () { rEl.classList.add("is-glitching"); }, everyMs);
+        if (q.has("glitch")) console.log("[cbs] glitch every " + (everyMs / 1000) + "s");
+      }
 
       if (q.has("worn") || q.has("date")) {
         console.log("[cbs] worn w=" + w.toFixed(3) +
