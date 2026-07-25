@@ -101,6 +101,17 @@
       color: var(--print);
       /* faint "screen print" softness on the ink */
       text-shadow: 0 1px 0 rgba(0,0,0,0.35);
+      /* slight fade — ink reads aged rather than bright white */
+      opacity: 0.94;
+      /* worn screen-print: sparse fine pinholes eaten out of the ink so the
+         heather shows through. The SVG writes noise into the ALPHA channel,
+         thresholded so most of the letter stays solid and only sparse specks drop out. */
+      -webkit-mask-image: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='260'%20height='260'%3E%3Cfilter%20id='w'%3E%3CfeTurbulence%20type='fractalNoise'%20baseFrequency='0.9'%20numOctaves='2'%20stitchTiles='stitch'/%3E%3CfeColorMatrix%20type='matrix'%20values='0%200%200%200%200%200%200%200%200%200%200%200%200%200%200%201%200%200%200%200'/%3E%3CfeComponentTransfer%3E%3CfeFuncA%20type='table'%20tableValues='0%201%201%201%201'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect%20width='100%25'%20height='100%25'%20filter='url(%23w)'/%3E%3C/svg%3E");
+              mask-image: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='260'%20height='260'%3E%3Cfilter%20id='w'%3E%3CfeTurbulence%20type='fractalNoise'%20baseFrequency='0.9'%20numOctaves='2'%20stitchTiles='stitch'/%3E%3CfeColorMatrix%20type='matrix'%20values='0%200%200%200%200%200%200%200%200%200%200%200%200%200%200%201%200%200%200%200'/%3E%3CfeComponentTransfer%3E%3CfeFuncA%20type='table'%20tableValues='0%201%201%201%201'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect%20width='100%25'%20height='100%25'%20filter='url(%23w)'/%3E%3C/svg%3E");
+      -webkit-mask-size: 200px 200px;
+              mask-size: 200px 200px;
+      -webkit-mask-repeat: repeat;
+              mask-repeat: repeat;
     }
     .wordmark .line { display: block; }
 
@@ -139,5 +150,80 @@
   <footer>
     <span>made with <span class="heart" aria-hidden="true">❤</span> and lozenger</span>
   </footer>
+
+  <script>
+    (function () {
+      /* -----------------------------------------------------------------
+         Worn-over-time: the title's wear drifts across a yearly cycle —
+         subtle on the ANCHOR date, degrading a little each day until it's
+         fully beat-up the day before, then resetting. Change ANCHOR anytime.
+         The static CSS mask above is the w=0 (subtle) no-JS fallback.
+
+           w = 0  -> subtle : freq 0.9, drop 1.0, opacity 0.94, size 200
+           w = 1  -> heavy  : freq 0.7, drop 0.0, opacity 0.90, size 230
+
+         Testing: ?worn=0..1 forces a level; ?date=YYYY-MM-DD simulates a day.
+      ------------------------------------------------------------------- */
+      var ANCHOR = "09-26"; // MM-DD
+
+      var lerp = function (a, b, t) { return a + (b - a) * t; };
+      var clamp01 = function (n) { return Math.min(1, Math.max(0, n)); };
+
+      function parseLocalDate(s) {
+        var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s || "");
+        return m ? new Date(+m[1], +m[2] - 1, +m[3]) : null;
+      }
+
+      function progressFor(when) {
+        var p = ANCHOR.split("-"), am = +p[0], ad = +p[1];
+        var d = new Date(when.getFullYear(), when.getMonth(), when.getDate());
+        var start = new Date(d.getFullYear(), am - 1, ad);
+        if (d < start) start = new Date(d.getFullYear() - 1, am - 1, ad);
+        var next = new Date(start.getFullYear() + 1, am - 1, ad);
+        var cycle = Math.round((next - start) / 864e5);   // 365 or 366
+        var daysIn = Math.round((d - start) / 864e5);
+        return clamp01(daysIn / (cycle - 1));             // 0 on anchor, 1 the day before next
+      }
+
+      function maskURI(freq, drop) {
+        var svg =
+          "<svg xmlns='http://www.w3.org/2000/svg' width='260' height='260'>" +
+            "<filter id='w'>" +
+              "<feTurbulence type='fractalNoise' baseFrequency='" + freq + "' numOctaves='2' stitchTiles='stitch'/>" +
+              "<feColorMatrix type='matrix' values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0'/>" +
+              "<feComponentTransfer><feFuncA type='table' tableValues='0 " + drop + " 1 1 1'/></feComponentTransfer>" +
+            "</filter>" +
+            "<rect width='100%' height='100%' filter='url(#w)'/>" +
+          "</svg>";
+        return 'url("data:image/svg+xml,' + encodeURIComponent(svg) + '")';
+      }
+
+      var q = new URLSearchParams(location.search), w, wq = parseFloat(q.get("worn"));
+      if (q.has("worn") && isFinite(wq)) {
+        w = clamp01(wq);
+      } else {
+        w = progressFor(parseLocalDate(q.get("date")) || new Date());
+      }
+
+      var freq = lerp(0.9, 0.7, w).toFixed(3);
+      var drop = lerp(1.0, 0.0, w).toFixed(3);
+      var size = Math.round(lerp(200, 230, w));
+      var opacity = lerp(0.94, 0.90, w).toFixed(3);
+
+      var el = document.querySelector(".wordmark");
+      if (el) {
+        var uri = maskURI(freq, drop);
+        el.style.webkitMaskImage = uri;
+        el.style.maskImage = uri;
+        el.style.webkitMaskSize = size + "px " + size + "px";
+        el.style.maskSize = size + "px " + size + "px";
+        el.style.opacity = opacity;
+      }
+      if (q.has("worn") || q.has("date")) {
+        console.log("[cbs] worn w=" + w.toFixed(3) +
+          " · freq " + freq + " · drop " + drop + " · size " + size + " · opacity " + opacity);
+      }
+    })();
+  </script>
 </body>
 </html>
