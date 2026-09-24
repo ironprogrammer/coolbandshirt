@@ -31,6 +31,7 @@
     * { box-sizing: border-box; }
 
     html, body { height: 100%; }
+    html { overflow-x: clip; }
 
     body {
       margin: 0;
@@ -42,7 +43,7 @@
       display: flex;
       flex-direction: column;
       min-height: 100dvh;
-      overflow-x: hidden;
+      overflow-x: clip;
     }
 
     /* ---- fabric texture ---------------------------------------------------
@@ -158,6 +159,135 @@
     @media (prefers-reduced-motion: no-preference) {
       .wordmark { transition: none; }
     }
+
+    /* ---- sewn-in labels (Instagram link) ----------------------------------
+       Either a woven brand label on the bottom hem or a care tag in the side
+       seam, picked at random per visit. ?tag=hem or ?tag=care forces one.
+       No-JS fallback is the hem label.
+    ------------------------------------------------------------------------ */
+    body { position: relative; }
+
+    /* woven ground: fine horizontal weft over faint vertical warp */
+    .woven {
+      background-image:
+        repeating-linear-gradient(0deg, rgba(0,0,0,0.16) 0 1px, rgba(255,255,255,0.05) 1px 2px),
+        repeating-linear-gradient(90deg, rgba(0,0,0,0.07) 0 1px, transparent 1px 3px);
+      box-shadow:
+        0 1px 0 rgba(255,255,255,0.08) inset,
+        0 -1px 0 rgba(0,0,0,0.25) inset,
+        0 2px 5px rgba(0,0,0,0.45);
+    }
+    /* woven lettering: the thread ribs run through the glyphs */
+    .thread {
+      background: repeating-linear-gradient(0deg, var(--thread) 0 1px, var(--thread-shade) 1px 2px);
+      -webkit-background-clip: text;
+              background-clip: text;
+      color: transparent;
+      filter: drop-shadow(0 1px 0 rgba(0,0,0,0.45));
+    }
+    .label {
+      position: absolute;
+      z-index: 2;
+      display: block;
+      text-decoration: none;
+    }
+    .label:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+    /* hem: double-needle stitching, rows at 9/16in and 3/4in from the bottom edge */
+    .hem {
+      position: absolute;
+      left: 0; right: 0; bottom: 0.5625in;
+      height: calc(0.1875in + 1px);
+      z-index: 1;
+      pointer-events: none;
+      background:
+        repeating-linear-gradient(90deg, rgba(244,241,234,0.16) 0 6px, transparent 6px 10px) top / 100% 1px no-repeat,
+        repeating-linear-gradient(90deg, rgba(244,241,234,0.16) 0 6px, transparent 6px 10px) 5px 100% / 100% 1px no-repeat;
+    }
+
+    .label--hem {
+      --thread: #f4f1ea;
+      --thread-shade: #cfc8ba;
+      left: clamp(16px, 8vw, 96px);
+      bottom: 0;
+      /* top edge sits so the red stitch (5px down) lands on the lower shirt hem stitch */
+      height: calc(0.5625in + 6px);
+      display: flex;
+      align-items: center;
+      padding: 6px 12px 0;
+      background-color: #a8342c;
+      border-radius: 2px 2px 0 0;
+      font-weight: 900;
+      font-size: 13px;
+      letter-spacing: 0.02em;
+      line-height: 1;
+    }
+
+    /* red thread stitch where the label is sewn down along its top */
+    .label--hem::before {
+      content: "";
+      position: absolute;
+      top: 5px; left: 4px; right: 4px;
+      height: 1px;
+      background: repeating-linear-gradient(90deg, #6e1c16 0 4px, transparent 4px 7px);
+      box-shadow: 0 1px 0 rgba(255,255,255,0.08);
+    }
+
+    .label--care {
+      --thread: #2a2826;
+      --thread-shade: #4a4640;
+      right: -6px;
+      bottom: 22vh;
+      width: 118px;
+      padding: 9px 16px 9px 9px;
+      background-color: #e7e2d6;
+      border-radius: 2px 0 0 2px;
+      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      font-size: 8px;
+      font-weight: 700;
+      line-height: 1.35;
+      letter-spacing: 0.06em;
+      text-align: center;
+      text-transform: uppercase;
+      transform-origin: 100% 50%;
+      transform: rotate(-5deg);
+    }
+    /* seam stitch where the tag is sewn in */
+    .label--care::after {
+      content: "";
+      position: absolute;
+      top: 3px; bottom: 3px; right: 6px;
+      width: 1px;
+      background: repeating-linear-gradient(0deg, rgba(0,0,0,0.35) 0 4px, transparent 4px 7px);
+    }
+    .label--care .care-icons {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 6px;
+      color: var(--thread);
+    }
+    .label--care svg { width: 14px; height: 14px; }
+    .label--care svg:first-child,
+    .label--care svg:last-child { width: 16.5px; height: 16.5px; }
+    .label--care span { display: block; }
+    .label--care .ig {
+      --thread: #a8342c;
+      --thread-shade: #7e2620;
+      margin-top: 5px;
+      font-size: 8.5px;
+      letter-spacing: 0.02em;
+      text-transform: none;
+    }
+
+    html:not([data-tag="care"]) .label--care,
+    [data-tag="care"] .label--hem { display: none; }
+
+    /* "made with" sits below the hem stitching; on phones it moves right to clear the hem label */
+    footer { padding: 3.5rem 1rem 0.875rem; }
+    @media (max-width: 480px) {
+      html:not([data-tag="care"]) footer { text-align: right; }
+    }
   </style>
 </head>
 <body>
@@ -183,6 +313,25 @@
   <footer>
     <span>made with <span class="heart" aria-hidden="true">❤</span> and lozenger</span>
   </footer>
+
+  <a class="label label--care woven" href="https://www.instagram.com/coolbandshirt/" rel="me" title="@coolbandshirt on Instagram" aria-label="@coolbandshirt on Instagram">
+    <span class="care-icons" aria-hidden="true">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M1.5 4.5l1.6 9h9.8l1.6-9"/><path d="M1.5 6c1.3-1 2.3 1 3.25 0s1.95 1 3.25 0 2.3 1 3.25 0 1.95 1 3.25 0"/><circle cx="8" cy="10.5" r="1.1" fill="currentColor" stroke="none"/></svg>
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M8 2l6.5 12h-13z"/><path d="M3 4l10 10M13 4L3 14"/></svg>
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="1.5" y="1.5" width="13" height="13"/><circle cx="8" cy="8" r="4.5"/><circle cx="8" cy="8" r=".6" fill="currentColor"/></svg>
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M1.5 12.5h13V8.5H7c-3 0-4.8 1.6-5.5 4z"/><path d="M6 8.5V7c0-.9.6-1.5 1.5-1.5h5.5v3"/><path d="M2 2.5l12 12M14 2.5l-12 12"/></svg>
+    </span>
+    <span class="thread">100% cotton</span>
+    <span class="thread">wash cold</span>
+    <span class="thread">inside out</span>
+    <span class="thread">tumble dry low</span>
+    <span class="thread ig">@coolbandshirt</span>
+  </a>
+
+  <a class="label label--hem woven" href="https://www.instagram.com/coolbandshirt/" rel="me" title="@coolbandshirt on Instagram" aria-label="@coolbandshirt on Instagram">
+    <span class="thread">@coolbandshirt</span>
+  </a>
+  <div class="hem" aria-hidden="true"></div>
 
   <script>
     (function () {
@@ -232,6 +381,7 @@
       }
 
       var q = new URLSearchParams(location.search), w, wq = parseFloat(q.get("worn"));
+      document.documentElement.dataset.tag = q.get("tag") || (Math.random() < 0.5 ? "hem" : "care");
       if (q.has("worn") && isFinite(wq)) {
         w = clamp01(wq);
       } else {
